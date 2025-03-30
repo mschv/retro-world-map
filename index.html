@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro World Map</title>
+    <style>
+        body { margin: 0; background: black; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: "Press Start 2P", sans-serif; }
+        canvas { image-rendering: pixelated; border: 4px solid white; }
+        .info-box {
+            display: none; position: absolute; background: rgba(0, 0, 0, 0.9);
+            color: white; padding: 15px; border: 2px solid white; width: 280px;
+            text-align: center; font-size: 12px; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="512" height="288"></canvas>
+    <div id="infoBox" class="info-box"></div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const infoBox = document.getElementById("infoBox");
+
+        // World Map
+        let worldMap = new Image();
+        worldMap.src = "https://static.wixstatic.com/media/8b7ad1_32cfb79935e841c08ac9a9c641f2ec85~mv2.png";
+
+        let player = new Image();
+        player.src = "https://static.wixstatic.com/media/8b7ad1_39aedfa049bd45f2b7bc5f7e3cc9a0eb~mv2.png";
+
+        let playerX = 240, playerY = 140;
+        const speed = 16;
+
+        // World Wonders & stats
+        const wonders = [
+            { 
+                name: "Great Wall of China", x: 320, y: 80, 
+                stats: { Age: "2,300 years", Height: "7.8m", Visitors: "10M/year" } 
+            },
+            { 
+                name: "Machu Picchu", x: 120, y: 200, 
+                stats: { Age: "600 years", Height: "2,430m above sea", Visitors: "1.5M/year" } 
+            },
+            { 
+                name: "Eiffel Tower", x: 250, y: 120, 
+                stats: { Age: "135 years", Height: "330m", Visitors: "7M/year" } 
+            }
+        ];
+
+        function checkWonder() {
+            for (let wonder of wonders) {
+                if (Math.abs(playerX - wonder.x) < 10 && Math.abs(playerY - wonder.y) < 10) {
+                    let statsHtml = `<ul>`;
+                    for (let key in wonder.stats) {
+                        statsHtml += `<li><b>${key}:</b> ${wonder.stats[key]}</li>`;
+                    }
+                    statsHtml += `</ul>`;
+
+                    infoBox.innerHTML = `<b>${wonder.name}</b><br>${statsHtml}<p>(Press X to close)</p>`;
+                    infoBox.style.display = "block";
+                    infoBox.style.left = `${canvas.offsetLeft + 20}px`;
+                    infoBox.style.top = `${canvas.offsetTop + 20}px`;
+                    return;
+                }
+            }
+            infoBox.style.display = "none";
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(worldMap, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(player, playerX, playerY, 16, 16);
+        }
+
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowUp") playerY -= speed;
+            if (event.key === "ArrowDown") playerY += speed;
+            if (event.key === "ArrowLeft") playerX -= speed;
+            if (event.key === "ArrowRight") playerX += speed;
+            if (event.key === "x") infoBox.style.display = "none";
+
+            drawGame();
+            checkWonder();
+        });
+
+        drawGame();
+    </script>
+</body>
+</html>

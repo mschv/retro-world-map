@@ -4,35 +4,80 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retro World Map</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/press-start-2p/1.0.0/pressstart2p.min.css" rel="stylesheet">
     <style>
-        body { margin: 0; background: black; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: "Press Start 2P", sans-serif; }
-        canvas { image-rendering: pixelated; border: 4px solid white; }
+        body { 
+            margin: 0; 
+            padding: 0;
+            background: black; 
+            overflow: hidden;
+            font-family: "Press Start 2P", sans-serif; 
+        }
+        canvas { 
+            image-rendering: pixelated; 
+            width: 100vw; 
+            height: 100vh;
+            display: block;
+        }
         .info-box {
-            display: none; position: absolute; background: rgba(0, 0, 0, 0.9);
-            color: white; padding: 15px; border: 2px solid white; width: 280px;
-            text-align: center; font-size: 12px; z-index: 10;
+            display: none; 
+            position: absolute; 
+            background: rgba(0, 0, 0, 0.9);
+            color: white; 
+            padding: 15px; 
+            border: 2px solid white; 
+            width: 280px;
+            text-align: center; 
+            font-size: 12px; 
+            z-index: 10;
+        }
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+            text-align: left;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="512" height="288"></canvas>
+    <canvas id="gameCanvas"></canvas>
     <div id="infoBox" class="info-box"></div>
-
     <script>
         const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
         const infoBox = document.getElementById("infoBox");
-
+        let assetsLoaded = 0;
+        const totalAssets = 2;
+        
+        // Set canvas to fill the screen
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // Call resize on page load and whenever window is resized
+        resizeCanvas();
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+            if (assetsLoaded >= totalAssets) {
+                drawGame();
+                checkWonder();
+            }
+        });
+        
+        const ctx = canvas.getContext("2d");
+        
         // World Map
         let worldMap = new Image();
-        worldMap.src = "https://static.wixstatic.com/media/8b7ad1_32cfb79935e841c08ac9a9c641f2ec85~mv2.png";
-
+        worldMap.onload = assetLoaded;
+        worldMap.src = "https://static.wixstatic.com/media/8b7ad1_32cfb79935e841c08ac9a9c641f2ec85~mv2.png"; // Placeholder for world map with higher resolution
+        
         let player = new Image();
-        player.src = "https://static.wixstatic.com/media/8b7ad1_39aedfa049bd45f2b7bc5f7e3cc9a0eb~mv2.png";
-
+        player.onload = assetLoaded;
+        player.src = "https://static.wixstatic.com/media/8b7ad1_39aedfa049bd45f2b7bc5f7e3cc9a0eb~mv2.png"; // Placeholder for character sprite
+        
         let playerX = 240, playerY = 140;
         const speed = 16;
-
+        
         // World Wonders & stats
         const wonders = [
             { 
@@ -48,17 +93,64 @@
                 stats: { Age: "135 years", Height: "330m", Visitors: "7M/year" } 
             }
         ];
-
+        
+        function assetLoaded() {
+            assetsLoaded++;
+            if (assetsLoaded >= totalAssets) {
+                initGame();
+            }
+        }
+        
+        function initGame() {
+            // Adjust wonder positions based on screen size
+            const scaleX = canvas.width / 512;
+            const scaleY = canvas.height / 288;
+            
+            wonders.forEach(wonder => {
+                wonder.x = wonder.x * scaleX;
+                wonder.y = wonder.y * scaleY;
+            });
+            
+            // Center player on screen
+            playerX = canvas.width / 2;
+            playerY = canvas.height / 2;
+            
+            drawGame();
+            window.addEventListener("keydown", handleKeyPress);
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === "ArrowUp") {
+                playerY -= speed;
+                if (playerY < 0) playerY = 0;
+            }
+            if (event.key === "ArrowDown") {
+                playerY += speed;
+                if (playerY > canvas.height - 16) playerY = canvas.height - 16;
+            }
+            if (event.key === "ArrowLeft") {
+                playerX -= speed;
+                if (playerX < 0) playerX = 0;
+            }
+            if (event.key === "ArrowRight") {
+                playerX += speed;
+                if (playerX > canvas.width - 16) playerX = canvas.width - 16;
+            }
+            if (event.key === "x") infoBox.style.display = "none";
+            
+            drawGame();
+            checkWonder();
+        }
+        
         function checkWonder() {
             for (let wonder of wonders) {
-                if (Math.abs(playerX - wonder.x) < 10 && Math.abs(playerY - wonder.y) < 10) {
+                if (Math.abs(playerX - wonder.x) < 20 && Math.abs(playerY - wonder.y) < 20) {
                     let statsHtml = `<ul>`;
                     for (let key in wonder.stats) {
                         statsHtml += `<li><b>${key}:</b> ${wonder.stats[key]}</li>`;
                     }
                     statsHtml += `</ul>`;
-
-                    infoBox.innerHTML = `<b>${wonder.name}</b><br>${statsHtml}<p>(Press X to close)</p>`;
+                    infoBox.innerHTML = `<b>${wonder.name}</b>${statsHtml}<p>(Press X to close)</p>`;
                     infoBox.style.display = "block";
                     infoBox.style.left = `${canvas.offsetLeft + 20}px`;
                     infoBox.style.top = `${canvas.offsetTop + 20}px`;
@@ -67,25 +159,32 @@
             }
             infoBox.style.display = "none";
         }
-
+        
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(worldMap, 0, 0, canvas.width, canvas.height);
-            ctx.drawImage(player, playerX, playerY, 16, 16);
+            
+            // Draw wonder locations
+            ctx.fillStyle = "red";
+            wonders.forEach(wonder => {
+                ctx.fillRect(wonder.x, wonder.y, 8, 8);
+            });
+            
+            // Draw player
+            ctx.drawImage(player, playerX, playerY, 100, 100);
         }
-
-        window.addEventListener("keydown", (event) => {
-            if (event.key === "ArrowUp") playerY -= speed;
-            if (event.key === "ArrowDown") playerY += speed;
-            if (event.key === "ArrowLeft") playerX -= speed;
-            if (event.key === "ArrowRight") playerX += speed;
-            if (event.key === "x") infoBox.style.display = "none";
-
-            drawGame();
-            checkWonder();
-        });
-
-        drawGame();
+        
+        // Draw loading text until assets are loaded
+        function drawLoading() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "16px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText("Loading...", canvas.width / 2, canvas.height / 2);
+        }
+        
+        drawLoading();
     </script>
 </body>
 </html>
